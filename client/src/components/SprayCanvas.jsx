@@ -11,7 +11,9 @@ const PARTICLES_PER_STEP = 5; // partículas geradas a cada amostra
 const JITTER_RADIUS = 3.2; // dispersão das partículas ao redor do traço (px) — pequeno = mais "linear"
 const DOT_MIN = 0.6;
 const DOT_MAX = 2.2;
-const DRIP_CHANCE = 15; // chance de pingar tinta ao soltar o traço
+const DRIP_CHANCE = 0.35; // chance de pingar tinta ao soltar o traço
+const MID_STROKE_DRIP_INTERVAL = 42; // distância (px) entre checagens de pingo durante o traço
+const MID_STROKE_DRIP_CHANCE = 0.3; // chance de pingar a cada intervalo, enquanto ainda desenha
 
 export default function SprayCanvas({ color, onReady, onStrokeChange }) {
   const canvasRef = useRef(null);
@@ -19,6 +21,7 @@ export default function SprayCanvas({ color, onReady, onStrokeChange }) {
   const drawingRef = useRef(false);
   const lastPointRef = useRef(null);
   const strokesRef = useRef([]); // pontos normalizados (0-1) por traço, para reconstrução vetorial no telão
+  const dripAccumRef = useRef(0); // distância acumulada desde o último pingo em meio ao traço
   const currentStrokeRef = useRef([]);
 
   useEffect(() => {
@@ -119,6 +122,7 @@ export default function SprayCanvas({ color, onReady, onStrokeChange }) {
   const handlePointerDown = (e) => {
     canvasRef.current.setPointerCapture(e.pointerId);
     drawingRef.current = true;
+    dripAccumRef.current = 0;
     const p = getLocalPoint(e);
     lastPointRef.current = p;
     currentStrokeRef.current = [normalize(p)];
@@ -128,8 +132,23 @@ export default function SprayCanvas({ color, onReady, onStrokeChange }) {
   const handlePointerMove = (e) => {
     if (!drawingRef.current) return;
     const p = getLocalPoint(e);
-    sprayLine(lastPointRef.current, p);
+    const from = lastPointRef.current;
+    sprayLine(from, p);
     currentStrokeRef.current.push(normalize(p));
+
+    // Pinga tinta de tempos em tempos enquanto a pessoa ainda está
+    // desenhando — não só quando solta o traço. Simula spray real, que
+    // escorre quando fica tempo demais no mesmo lugar.
+    const dx = p.x - from.x;
+    const dy = p.y - from.y;
+    dripAccumRef.current += Math.sqrt(dx * dx + dy * dy);
+    if (dripAccumRef.current >= MID_STROKE_DRIP_INTERVAL) {
+      dripAccumRef.current = 0;
+      if (Math.random() < MID_STROKE_DRIP_CHANCE) {
+        addDrip(p.x, p.y);
+      }
+    }
+
     lastPointRef.current = p;
   };
 

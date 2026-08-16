@@ -1,12 +1,14 @@
 import { useRef, useState } from 'react';
 import SignatureModal from '../components/SignatureModal';
 import { socket } from '../socket';
+import { getContrastText } from '../lib/color';
 
 export default function Tablet() {
   const wallRef = useRef(null);
   const [pendingPos, setPendingPos] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [sent, setSent] = useState(false);
+  const [sentColor, setSentColor] = useState('#16a34a');
 
   const handleWallClick = (e) => {
     const rect = wallRef.current.getBoundingClientRect();
@@ -20,6 +22,7 @@ export default function Tablet() {
     // signaturePayload = { dataUrl, strokes, color } — vem do SprayCanvas
     socket.emit('signature:new', { ...pendingPos, ...signaturePayload });
     setShowModal(false);
+    setSentColor(signaturePayload.color || '#16a34a');
     setSent(true);
     setTimeout(() => setSent(false), 2500);
   };
@@ -42,7 +45,14 @@ export default function Tablet() {
         <SignatureModal onConfirm={handleConfirm} onCancel={() => setShowModal(false)} />
       )}
 
-      {sent && <div className="toast">Assinatura enviada! Olhe para o telão ✨</div>}
+      {sent && (
+        <div
+          className="toast"
+          style={{ background: sentColor, color: getContrastText(sentColor) }}
+        >
+          Assinatura enviada! Olhe para o telão ✨
+        </div>
+      )}
     </div>
   );
 }

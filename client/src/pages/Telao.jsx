@@ -6,7 +6,7 @@ import { SPRAY_ASPECT } from '../components/SprayCanvas';
 const HIGHLIGHT_MS = 2000;
 const VIEW_W = 440;
 const VIEW_H = VIEW_W / SPRAY_ASPECT;
-const DRAW_PX_PER_SEC = 1200; // velocidade do "desenho" vetorial do traço
+const DRAW_PX_PER_SEC = 900; // velocidade do "desenho" vetorial do traço
 
 export default function Telao() {
   const [placed, setPlaced] = useState([]); // já fixadas no mural

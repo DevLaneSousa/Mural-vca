@@ -189,37 +189,17 @@ body {
 }
 
 /* ---------- Parede de tijolos (mural) ---------- */
+/* Coloque o arquivo em client/public/muro-tijolos.png */
 .brick-wall {
-  --brick: #9c4f38;
-  --brick-dark: #7e3d2b;
-  --mortar: #cdbfa8;
-  background-color: var(--mortar);
-  background-image:
-    linear-gradient(335deg, var(--brick) 23px, transparent 23px),
-    linear-gradient(155deg, var(--brick) 23px, transparent 23px),
-    linear-gradient(335deg, var(--brick) 23px, transparent 23px),
-    linear-gradient(155deg, var(--brick) 23px, transparent 23px);
-  background-size: 58px 58px;
-  background-position: 0 2px, 4px 35px, 29px 31px, 34px 6px;
+  background-color: #3a2a22; /* aparece só um instante, antes da imagem carregar */
+  background-image: url('/muro-tijolos.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   position: relative;
 }
 
-/* Variação de tom entre tijolos, pra não ficar uniforme demais */
-.brick-wall::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: repeating-linear-gradient(
-    0deg,
-    rgba(0, 0, 0, 0.08) 0px,
-    transparent 2px,
-    transparent 58px,
-    rgba(0, 0, 0, 0.08) 60px
-  );
-  pointer-events: none;
-}
-
-/* Grão/sujeira sutil + vinheta pra dar profundidade e realismo de parede real */
+/* Grão sutil + vinheta pra dar profundidade e disfarçar bordas de repetição */
 .brick-wall::after {
   content: '';
   position: absolute;
@@ -228,12 +208,8 @@ body {
     radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.45) 100%),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
   mix-blend-mode: multiply;
-  opacity: 0.5;
+  opacity: 0.4;
   pointer-events: none;
-}
-
-.telao-page .brick-wall {
-  z-index: 1;
 }
 
 .wall {
