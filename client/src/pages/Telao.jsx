@@ -245,7 +245,11 @@ export default function Telao() {
 
   return (
     <div className="telao-page">
-      <div className="wall brick-wall" ref={wallRef} />
+      <div className="wall brick-wall" ref={wallRef}>
+        {/* Manchas envelhecidas + riscos de giz nos cantos, pra dar mais
+            idade/textura ao muro (além do grão sutil que já existia) */}
+        <div className="wall-aging" />
+      </div>
 
       {/* Camada separada só com as assinaturas já fixadas */}
       <div className="signatures-layer">
