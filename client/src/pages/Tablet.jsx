@@ -1,7 +1,17 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import SignatureModal from '../components/SignatureModal';
 import { socket } from '../socket';
 import { getContrastText } from '../lib/color';
+
+// Adesivos decorativos espalhados pela tela — troque/adicione à vontade
+const STICKERS = [
+  { src: '/adesivos/adesivos1.svg', className: 'sticker sticker-1' },
+  { src: '/adesivos/adesivos5.svg', className: 'sticker sticker-2' },
+  { src: '/adesivos/adesivos4.svg', className: 'sticker sticker-3' },
+  { src: '/adesivos/adesivos8.svg', className: 'sticker sticker-4' },
+  { src: '/adesivos/adesivos3.svg', className: 'sticker sticker-5' },
+  { src: '/adesivos/adesivos6.svg', className: 'sticker sticker-6' },
+];
 
 export default function Tablet() {
   const wallRef = useRef(null);
@@ -9,6 +19,19 @@ export default function Tablet() {
   const [showModal, setShowModal] = useState(false);
   const [sent, setSent] = useState(false);
   const [sentColor, setSentColor] = useState('#16a34a');
+  const [occupied, setOccupied] = useState([]); // espelha as assinaturas já no mural
+
+  useEffect(() => {
+    socket.on('signatures:sync', (all) => setOccupied(all));
+    socket.on('signature:new', (sig) => setOccupied((prev) => [...prev, sig]));
+    socket.on('signature:removed', ({ id }) => setOccupied((prev) => prev.filter((s) => s.id !== id)));
+
+    return () => {
+      socket.off('signatures:sync');
+      socket.off('signature:new');
+      socket.off('signature:removed');
+    };
+  }, []);
 
   const handleWallClick = (e) => {
     const rect = wallRef.current.getBoundingClientRect();
@@ -29,16 +52,36 @@ export default function Tablet() {
 
   return (
     <div className="tablet-page">
-      <h1>Escolha um lugar no mural e assine</h1>
-      <p className="subtitle">Toque em qualquer ponto da imagem abaixo (é um espelho do telão)</p>
+      {STICKERS.map((s) => (
+        <img key={s.className} src={s.src} className={s.className} alt="" aria-hidden="true" />
+      ))}
 
-      {/*
-        Essa div representa o mural em miniatura. Troque o background
-        por uma captura de tela real do /telao para a pessoa escolher
-        o local com precisão.
-      */}
-      <div className="wall-preview brick-wall" ref={wallRef} onClick={handleWallClick}>
-        <span className="wall-hint">Toque em um espaço livre</span>
+      <img src="/boneco-frente-spray.svg" className="mascot-hero" alt="Mascote VCA" />
+
+      <div className="tablet-content">
+        <div className="tablet-header">
+          <h1 className="tablet-title">
+            Deixe sua marca
+            <br />
+            <span>no mural</span>
+          </h1>
+          <p className="tablet-subtitle">
+            Toque em um espaço livre abaixo — é um espelho ao vivo do telão
+          </p>
+        </div>
+
+        <div className="wall-preview brick-wall" ref={wallRef} onClick={handleWallClick}>
+          {occupied.map((sig) => (
+            <img
+              key={sig.id}
+              src={sig.dataUrl}
+              className="occupied-mark"
+              style={{ left: `${sig.x * 100}%`, top: `${sig.y * 100}%` }}
+              alt=""
+            />
+          ))}
+          <span className="wall-hint">Toque em um espaço livre</span>
+        </div>
       </div>
 
       {showModal && (
