@@ -18,7 +18,7 @@ export default function Tablet() {
   const [pendingPos, setPendingPos] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [sent, setSent] = useState(false);
-  const [sentColor, setSentColor] = useState('#16a34a');
+  const [sentColor, setSentColor] = useState('#00ff00');
   const [occupied, setOccupied] = useState([]); // espelha as assinaturas já no mural
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export default function Tablet() {
     // signaturePayload = { dataUrl, strokes, color } — vem do SprayCanvas
     socket.emit('signature:new', { ...pendingPos, ...signaturePayload });
     setShowModal(false);
-    setSentColor(signaturePayload.color || '#16a34a');
+    setSentColor(signaturePayload.color || '#00ff00');
     setSent(true);
     setTimeout(() => setSent(false), 2500);
   };

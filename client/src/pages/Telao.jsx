@@ -1,12 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { socket } from '../socket';
-import { SPRAY_ASPECT } from '../components/SprayCanvas';
 
-const HIGHLIGHT_MS = 2000;
-const VIEW_W = 440;
-const VIEW_H = VIEW_W / SPRAY_ASPECT;
-const DRAW_PX_PER_SEC = 900; // velocidade do "desenho" vetorial do traço
+const HIGHLIGHT_MS = 900;
+const WIPE_DURATION = 0.9; // revelação (não linear) da esquerda pra direita
 
 export default function Telao() {
   const [placed, setPlaced] = useState([]); // já fixadas no mural
@@ -15,7 +12,7 @@ export default function Telao() {
   const processingRef = useRef(false);
   const wallRef = useRef(null);
   const videoRef = useRef(null);
-  const svgRef = useRef(null);
+  const knownPlacedIdsRef = useRef(new Set()); // pra animar só quem acabou de "teletransportar"
 
   useEffect(() => {
     socket.on('signatures:sync', (all) => setPlaced(all));
@@ -55,23 +52,96 @@ export default function Telao() {
     setActive(next);
   }
 
-  function spawnDripFlourish(container, color) {
-    const count = 2 + Math.floor(Math.random() * 3);
+  // A assinatura some do centro e "re-aparece" (teletransporta) já no seu
+  // lugar no mural — este efeito dá o flash de chegada nela, em vez de
+  // deixá-la só surgir estática.
+  useLayoutEffect(() => {
+    const known = knownPlacedIdsRef.current;
+    placed.forEach((sig) => {
+      if (known.has(sig.id)) return;
+      known.add(sig.id);
+      const el = document.getElementById(`sig-${sig.id}`);
+      if (el) {
+        gsap.fromTo(
+          el,
+          { opacity: 0, scale: 0.3 },
+          { opacity: 1, scale: 1, duration: 0.35, ease: 'back.out(2.4)' }
+        );
+      }
+    });
+  }, [placed]);
+
+  // Nuvenzinhas de "fumaça" coloridas por cima do traço, como se a tinta do
+  // spray estivesse soltando fumaça — usam a mesma cor escolhida pelo
+  // usuário. xPercent posiciona a nuvem ao longo da varredura esquerda→direita.
+  function spawnSmoke(container, color, xPercent = 50) {
+    const count = 3 + Math.floor(Math.random() * 3);
     for (let i = 0; i < count; i++) {
-      const drip = document.createElement('div');
-      drip.className = 'drip-flourish';
-      drip.style.left = `${20 + Math.random() * 60}%`;
-      drip.style.background = `linear-gradient(${color}, transparent)`;
-      container.appendChild(drip);
+      const puff = document.createElement('div');
+      puff.className = 'paint-smoke';
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.random() * 30;
+      const size = 60 + Math.random() * 70;
+      puff.style.left = `calc(${xPercent}% + ${(Math.cos(angle) * dist).toFixed(1)}px)`;
+      puff.style.top = `calc(50% + ${(Math.sin(angle) * dist).toFixed(1)}px)`;
+      puff.style.width = `${size}px`;
+      puff.style.height = `${size}px`;
+      puff.style.background = `radial-gradient(circle, ${color} 0%, ${color}00 72%)`;
+      container.appendChild(puff);
       gsap.fromTo(
-        drip,
-        { scaleY: 0, opacity: 0.9 },
+        puff,
+        { scale: 0.3, opacity: 0 },
         {
-          scaleY: 1,
-          duration: 0.5 + Math.random() * 0.4,
-          ease: 'power2.in',
+          scale: 1.6,
+          opacity: 0.7,
+          y: -20 - Math.random() * 30,
+          duration: 0.5 + Math.random() * 0.3,
+          ease: 'power1.out',
           onComplete: () => {
-            gsap.to(drip, { opacity: 0, duration: 0.6, delay: 0.3, onComplete: () => drip.remove() });
+            gsap.to(puff, {
+              opacity: 0,
+              y: '-=30',
+              scale: '+=0.3',
+              duration: 0.7,
+              ease: 'power1.out',
+              onComplete: () => puff.remove(),
+            });
+          },
+        }
+      );
+    }
+  }
+
+  // Pequenos respingos ao redor, como o "chuvisco" de uma lata de spray —
+  // aparecem enquanto a assinatura é criada, não escorrem e somem rápido.
+  function spawnSplatter(container, color) {
+    const count = 6 + Math.floor(Math.random() * 6);
+    for (let i = 0; i < count; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'paint-splatter';
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 40 + Math.random() * 150;
+      const size = 3 + Math.random() * 6;
+      dot.style.left = `calc(50% + ${(Math.cos(angle) * dist).toFixed(1)}px)`;
+      dot.style.top = `calc(50% + ${(Math.sin(angle) * dist).toFixed(1)}px)`;
+      dot.style.width = `${size}px`;
+      dot.style.height = `${size}px`;
+      dot.style.background = color;
+      container.appendChild(dot);
+      gsap.fromTo(
+        dot,
+        { scale: 0, opacity: 0.95 },
+        {
+          scale: 1,
+          duration: 0.2 + Math.random() * 0.25,
+          ease: 'back.out(2.5)',
+          onComplete: () => {
+            gsap.to(dot, {
+              opacity: 0,
+              duration: 0.5,
+              delay: 0.3 + Math.random() * 0.3,
+              onComplete: () => dot.remove(),
+            });
           },
         }
       );
@@ -84,11 +154,9 @@ export default function Telao() {
 
     const imgEl = document.getElementById('active-signature');
     const dripContainer = document.getElementById('drip-container');
+    const smokeSweepEl = document.getElementById('smoke-sweep');
     const video = videoRef.current;
     if (!imgEl) return;
-
-    const strokePaths = svgRef.current ? Array.from(svgRef.current.querySelectorAll('.stroke-path')) : [];
-    const hasVectorReveal = strokePaths.length > 0;
 
     const tl = gsap.timeline({
       onComplete: () => {
@@ -99,68 +167,77 @@ export default function Telao() {
       },
     });
 
-    gsap.set(imgEl, { opacity: 0, x: 0, y: 0, scale: 1.3 });
-    if (svgRef.current) gsap.set(svgRef.current, { opacity: 1 });
+    const color = active.color || '#f4189b';
+    gsap.set(imgEl, { opacity: 0, x: 0, y: 0, scale: 1.3, clipPath: 'inset(0 100% 0 0)' });
+    if (smokeSweepEl) {
+      smokeSweepEl.style.color = color;
+      gsap.set(smokeSweepEl, { opacity: 0, backgroundPosition: '150% 0' });
+    }
 
     // --- 1) mascote entra e "joga tinta" (ou fallback em CSS) ---
     const hasVideo = video && video.readyState >= 2 && !video.error;
+    const VIDEO_DURATION = hasVideo ? video.duration || 2 : 0;
+    // O traço/frase começa a surgir quando o vídeo estiver na metade — os
+    // dois correm ao mesmo tempo (o vídeo fica atrás, como um fundo que
+    // combina com o do telão) em vez de um esperar o outro terminar.
+    const REVEAL_START_DELAY = hasVideo ? VIDEO_DURATION / 2 : 0.3;
+
     if (hasVideo) {
       video.currentTime = 0;
       video.style.opacity = 1;
       video.play().catch(() => {});
-      const SPLASH_AT = Math.min(1.0, (video.duration || 2) * 0.55);
-      tl.to({}, { duration: SPLASH_AT });
-      tl.to(video, { opacity: 0, duration: 0.4 });
+      // Reserva o tempo do vídeo inteiro na timeline, em paralelo com o resto
+      tl.to({}, { duration: VIDEO_DURATION }, 0);
+      tl.to(video, { opacity: 0, duration: 0.4 }, VIDEO_DURATION);
     } else {
       tl.fromTo(
         '.paint-splash',
         { scale: 0, opacity: 0.9 },
-        { scale: 1, opacity: 0, duration: 0.45, ease: 'power2.out' }
+        { scale: 1, opacity: 0, duration: 0.45, ease: 'power2.out' },
+        0
       );
     }
 
-    // --- 2) o traço é "desenhado" progressivamente, como um grafite sendo feito ---
-    if (hasVectorReveal) {
-      strokePaths.forEach((path, i) => {
-        const length = path.getTotalLength();
-        gsap.set(path, { strokeDasharray: length, strokeDashoffset: length });
-        const duration = Math.max(0.15, length / DRAW_PX_PER_SEC);
-        tl.to(path, { strokeDashoffset: 0, duration, ease: 'none' }, i === 0 ? '+=0.05' : '-=0.08');
-      });
-    } else {
-      // sem dados vetoriais (assinatura antiga): recorre ao reveal em círculo
-      tl.fromTo(imgEl, { clipPath: 'circle(0% at 50% 50%)' }, { clipPath: 'circle(140% at 50% 50%)', duration: 0.5 });
+    // --- 2) a assinatura surge "raspada" da esquerda pra direita — uma
+    // fumaça densa na cor escolhida varre a imagem (não é uma revelação
+    // linear) e, conforme ela passa, o texto real vai aparecendo por baixo,
+    // com respingos e fumacinhas extras ao redor ---
+    tl.call(() => dripContainer && spawnSplatter(dripContainer, color), null, REVEAL_START_DELAY);
+
+    const puffCount = 9;
+    for (let i = 0; i < puffCount; i++) {
+      const progress = (i + 0.5) / puffCount;
+      const t = REVEAL_START_DELAY + progress * WIPE_DURATION;
+      const xPercent = progress * 100;
+      tl.call(() => dripContainer && spawnSmoke(dripContainer, color, xPercent), null, t);
     }
 
-    // --- 3) respingo de tinta escorrendo, na sequência ---
-    tl.call(() => dripContainer && spawnDripFlourish(dripContainer, active.color || '#f4189b'));
-    tl.to({}, { duration: 0.35 });
-
-    // --- 4) crossfade do traço vetorial para a textura de spray final ---
-    if (hasVectorReveal && svgRef.current) {
-      tl.to(svgRef.current, { opacity: 0, duration: 0.35 }, '-=0.1');
-    }
-    tl.to(imgEl, { opacity: 1, duration: 0.35 }, '<');
-
-    // --- 5) destaque parado no centro ---
-    tl.to({}, { duration: HIGHLIGHT_MS / 1000 });
-
-    // --- 6) voo até a posição escolhida no mural ---
-    if (wallRef.current) {
-      const wallRect = wallRef.current.getBoundingClientRect();
-      const targetX = wallRect.left + active.x * wallRect.width;
-      const targetY = wallRect.top + active.y * wallRect.height;
-      const centerRect = imgEl.getBoundingClientRect();
-      tl.to(imgEl, {
-        x: targetX - (centerRect.left + centerRect.width / 2),
-        y: targetY - (centerRect.top + centerRect.height / 2),
-        scale: 0.32,
-        duration: 1,
-        ease: 'power3.inOut',
-      });
+    tl.set(imgEl, { opacity: 1 }, REVEAL_START_DELAY);
+    tl.to(
+      imgEl,
+      { clipPath: 'inset(0 0% 0 0)', duration: WIPE_DURATION, ease: 'power3.out' },
+      REVEAL_START_DELAY
+    );
+    if (smokeSweepEl) {
+      tl.to(smokeSweepEl, { opacity: 0.9, duration: 0.08 }, REVEAL_START_DELAY);
+      tl.to(
+        smokeSweepEl,
+        { backgroundPosition: '-60% 0', duration: WIPE_DURATION, ease: 'power3.out' },
+        REVEAL_START_DELAY
+      );
+      tl.to(smokeSweepEl, { opacity: 0, duration: 0.3 }, `+=0.05`);
     }
 
-    tl.to(imgEl, { opacity: 0, duration: 0.15 });
+    // Marca o fim real da revelação: o maior entre o vídeo e a "raspada"
+    tl.addLabel('revealEnd');
+
+    // --- 3) destaque parado no centro ---
+    tl.to({}, { duration: HIGHLIGHT_MS / 1000 }, 'revealEnd+=0.15');
+
+    // --- 4) some do centro — ela "teletransporta" pro lugar dela no mural
+    // em vez de voar até lá (o pop de chegada acontece em .placed-signature-wrap
+    // quando essa assinatura entra no array `placed`, ver useLayoutEffect acima) ---
+    tl.to(imgEl, { opacity: 0, scale: 0.55, duration: 0.25, ease: 'power2.in' });
 
     return () => tl.kill();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -168,16 +245,22 @@ export default function Telao() {
 
   return (
     <div className="telao-page">
-      <div className="wall brick-wall" ref={wallRef}>
+      <div className="wall brick-wall" ref={wallRef} />
+
+      {/* Camada separada só com as assinaturas já fixadas */}
+      <div className="signatures-layer">
         {placed.map((sig) => (
-          <img
+          <div
             key={sig.id}
             id={`sig-${sig.id}`}
-            src={sig.dataUrl}
-            className="placed-signature"
-            style={{ left: `${sig.x * 100}%`, top: `${sig.y * 100}%` }}
-            alt="assinatura"
-          />
+            className="placed-signature-wrap"
+            style={{ left: `${sig.x * 100}%`, top: `${sig.y * 100}%`, '--sig-mask': `url(${sig.dataUrl})` }}
+          >
+            <img src={sig.dataUrl} className="placed-signature" alt="assinatura" />
+            {/* Textura de grão por cima, recortada na forma exata do spray
+                (via mask), pra não parecer um adesivo liso na parede */}
+            <div className="placed-signature-texture" />
+          </div>
         ))}
       </div>
 
@@ -185,43 +268,23 @@ export default function Telao() {
         <div className="active-overlay">
           <div className="paint-splash" />
 
-          <svg
-            ref={svgRef}
-            className="active-svg"
-            viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-            style={{ opacity: active.strokes?.length ? 1 : 0 }}
-          >
-            {(active.strokes || []).map((stroke, i) => (
-              <path
-                key={i}
-                className="stroke-path"
-                fill="none"
-                stroke={active.color || '#f4189b'}
-                strokeWidth="5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d={strokeToPath(stroke)}
-              />
-            ))}
-          </svg>
-
           <div id="drip-container" className="drip-container" />
 
+          {/* A imagem real exportada (textura e cor de spray originais) é
+              revelada com um clip-path animado da esquerda pra direita —
+              a "raspadinha" — em vez de redesenhar o traço. */}
           <img id="active-signature" src={active.dataUrl} className="active-signature" alt="assinatura em destaque" />
+
+          {/* Fumaça que varre por cima da imagem, na cor escolhida, acompanhando a raspadinha */}
+          <div id="smoke-sweep" className="smoke-sweep" />
         </div>
       )}
 
-      {/* Troque o src pelo vídeo real do mascote (webm com canal alpha) */}
+      {/* Vídeo do mascote — sem background (canal alpha), então fica por
+          cima de tudo de novo, como antes. */}
       <video ref={videoRef} className="mascot-video" muted playsInline preload="auto">
-        <source src="/mascot.webm" type="video/webm" />
+        <source src="/video-s-bg.webm" type="video/webm" />
       </video>
     </div>
   );
-}
-
-function strokeToPath(points) {
-  if (!points || points.length === 0) return '';
-  return points
-    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${(p.x * VIEW_W).toFixed(1)},${(p.y * VIEW_H).toFixed(1)}`)
-    .join(' ');
 }

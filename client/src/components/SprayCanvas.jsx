@@ -7,10 +7,12 @@ export const SPRAY_ASPECT = 2.2; // largura / altura
 
 // Ajuste estes valores para calibrar o "realismo" do spray:
 const STEP_PX = 2.2; // distância entre amostras ao longo do traço (menor = mais denso/contínuo)
-const PARTICLES_PER_STEP = 5; // partículas geradas a cada amostra
-const JITTER_RADIUS = 3.2; // dispersão das partículas ao redor do traço (px) — pequeno = mais "linear"
+const PARTICLES_PER_STEP = 7; // partículas do núcleo denso, geradas a cada amostra
+const JITTER_RADIUS = 4; // dispersão do núcleo ao redor do traço (px) — pequeno = mais "linear"
+const HALO_PARTICLES_PER_STEP = 5; // névoa/overspray fina, além do núcleo (o "chuvisco" de uma lata real)
+const HALO_SPREAD = 10; // alcance extra da névoa além do núcleo (px)
 const DOT_MIN = 0.6;
-const DOT_MAX = 2.2;
+const DOT_MAX = 2.6;
 const DRIP_CHANCE = 0.35; // chance de pingar tinta ao soltar o traço
 const MID_STROKE_DRIP_INTERVAL = 42; // distância (px) entre checagens de pingo durante o traço
 const MID_STROKE_DRIP_CHANCE = 0.3; // chance de pingar a cada intervalo, enquanto ainda desenha
@@ -23,6 +25,13 @@ export default function SprayCanvas({ color, onReady, onStrokeChange }) {
   const strokesRef = useRef([]); // pontos normalizados (0-1) por traço, para reconstrução vetorial no telão
   const dripAccumRef = useRef(0); // distância acumulada desde o último pingo em meio ao traço
   const currentStrokeRef = useRef([]);
+  // 'color' é lido dentro do useEffect de montagem (roda só 1x), então uma
+  // closure direta ficaria travada na cor inicial. O ref sempre reflete a
+  // cor atual escolhida no modal, mesmo depois de trocar a cor.
+  const colorRef = useRef(color);
+  useEffect(() => {
+    colorRef.current = color;
+  }, [color]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -51,7 +60,7 @@ export default function SprayCanvas({ color, onReady, onStrokeChange }) {
       exportSignature: () => ({
         dataUrl: canvas.toDataURL('image/png'),
         strokes: strokesRef.current,
-        color,
+        color: colorRef.current,
       }),
     });
 
@@ -61,14 +70,15 @@ export default function SprayCanvas({ color, onReady, onStrokeChange }) {
 
   const sprayBurst = (x, y) => {
     const ctx = ctxRef.current;
+
+    // núcleo: tinta densa e concentrada perto do centro do traço
     for (let i = 0; i < PARTICLES_PER_STEP; i++) {
       const angle = Math.random() * Math.PI * 2;
-      // distribuição concentrada perto do centro (spray real tem núcleo denso + halo leve)
       const r = Math.pow(Math.random(), 1.6) * JITTER_RADIUS;
       const px = x + Math.cos(angle) * r;
       const py = y + Math.sin(angle) * r;
       const rad = DOT_MIN + Math.random() * (DOT_MAX - DOT_MIN);
-      const alpha = 0.25 + Math.random() * 0.5;
+      const alpha = 0.3 + Math.random() * 0.5;
 
       ctx.beginPath();
       ctx.fillStyle = color;
@@ -76,6 +86,25 @@ export default function SprayCanvas({ color, onReady, onStrokeChange }) {
       ctx.arc(px, py, rad, 0, Math.PI * 2);
       ctx.fill();
     }
+
+    // névoa: respingos finos e translúcidos além do núcleo — é o "chuvisco"
+    // que uma lata de spray real deixa ao redor do traço, dando a sensação
+    // de textura granulada em vez de uma linha lisa
+    for (let i = 0; i < HALO_PARTICLES_PER_STEP; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const r = JITTER_RADIUS + Math.random() * HALO_SPREAD;
+      const px = x + Math.cos(angle) * r;
+      const py = y + Math.sin(angle) * r;
+      const rad = 0.4 + Math.random();
+      const alpha = 0.04 + Math.random() * 0.1;
+
+      ctx.beginPath();
+      ctx.fillStyle = color;
+      ctx.globalAlpha = alpha;
+      ctx.arc(px, py, rad, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     ctx.globalAlpha = 1;
   };
 

@@ -79,10 +79,12 @@ body {
   justify-content: center;
   padding: 28px 24px;
   background:
-    radial-gradient(circle at 12% 15%, rgba(142, 224, 0, 0.22), transparent 42%),
+    radial-gradient(circle at 12% 15%, rgba(158, 12, 12, 0.795), transparent 42%),
     radial-gradient(circle at 88% 80%, rgba(255, 122, 26, 0.2), transparent 45%),
-    repeating-linear-gradient(135deg, #16181d 0px, #16181d 2px, #1c1f26 2px, #1c1f26 42px),
-    #101114;
+    url('/bg-tablet.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .tablet-content {
@@ -146,11 +148,11 @@ body {
 
 .occupied-mark {
   position: absolute;
-  width: 60px;
+  width: 84px;
   transform: translate(-50%, -50%);
   opacity: 0.9;
   pointer-events: none;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.6)) drop-shadow(0 6px 12px rgba(0, 0, 0, 0.3));
 }
 
 .wall-hint {
@@ -181,9 +183,9 @@ body {
   position: absolute;
   bottom: 0;
   right: 1%;
-  height: 48vh;
-  max-height: 440px;
-  z-index: 1;
+  height: 68vh;
+  max-height: 740px;
+  z-index: 10;
   pointer-events: none;
   filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.55));
 }
@@ -323,6 +325,12 @@ body {
   position: relative;
 }
 
+/* No telão, a parede preenche a tela inteira sem cortar as bordas da
+   imagem (mesmo que estique um pouco, em vez de usar "cover" e recortar) */
+.wall.brick-wall {
+  background-size: 100% 100%;
+}
+
 /* Grão sutil + vinheta pra dar profundidade e disfarçar bordas de repetição */
 .brick-wall::after {
   content: '';
@@ -342,29 +350,59 @@ body {
   z-index: 1;
 }
 
-.placed-signature {
+/* Camada separada das assinaturas já fixadas, acima do fundo de tijolos */
+.signatures-layer {
   position: absolute;
-  width: 140px;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.placed-signature-wrap {
+  position: absolute;
+  width: 190px;
   transform: translate(-50%, -50%);
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+  pointer-events: none;
+}
+
+.placed-signature {
+  position: relative;
+  width: 100%;
+  display: block;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.55)) drop-shadow(0 10px 20px rgba(0, 0, 0, 0.35));
+  pointer-events: none;
+}
+
+/* Grão sutil recortado exatamente na forma do spray (usa a própria imagem
+   como máscara de alfa), pra parecer tinta na parede e não um adesivo liso */
+.placed-signature-texture {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 70px 70px;
+  mix-blend-mode: overlay;
+  opacity: 0.6;
+  -webkit-mask-image: var(--sig-mask);
+  mask-image: var(--sig-mask);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-mode: alpha;
+  mask-mode: alpha;
   pointer-events: none;
 }
 
 .active-overlay {
   position: fixed;
   top: 50%;
-  left: 50%;
+  /* Deslocada mais pro canto direito, alinhada com a direção do spray do
+     mascote no vídeo de fundo, em vez de ficar centralizada na tela. */
+  left: 72%;
   transform: translate(-50%, -50%);
   z-index: 20;
   pointer-events: none;
   width: 420px;
-}
-
-.active-svg {
-  width: 100%;
-  display: block;
-  overflow: visible;
-  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.5));
 }
 
 .active-signature {
@@ -383,13 +421,37 @@ body {
   pointer-events: none;
 }
 
-.drip-flourish {
+.paint-splatter {
   position: absolute;
-  top: 45%;
-  width: 5px;
-  height: 90px;
-  border-radius: 3px;
-  transform-origin: top;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.paint-smoke {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  filter: blur(4px);
+  pointer-events: none;
+}
+
+/* Nuvem que varre a assinatura da esquerda pra direita ("raspadinha") na
+   cor escolhida pelo usuário (via currentColor, setado no JS) */
+.smoke-sweep {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, currentColor 36%, currentColor 64%, transparent 100%);
+  background-size: 260% 100%;
+  background-position: 150% 0;
+  filter: blur(14px);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .paint-splash {
@@ -407,10 +469,13 @@ body {
 
 .mascot-video {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 520px;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  /* Sem background (canal alpha) — fica por cima de tudo (mural e
+     assinatura em destaque), igual era antes de existir a versão com fundo
+     opaco do vídeo. */
   z-index: 30;
   opacity: 0;
   pointer-events: none;
