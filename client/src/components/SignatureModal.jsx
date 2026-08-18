@@ -10,11 +10,11 @@ export const SPRAY_COLORS = [
   { name: 'Amarelo', value: '#ffd400' },
   { name: 'Roxo', value: '#8b3cf0' },
   { name: 'Branco', value: '#f5f5f5' },
-  { name: 'Preto', value: '#111111' },
 ];
 
 export default function SignatureModal({ onConfirm, onCancel }) {
   const [color, setColor] = useState(SPRAY_COLORS[0].value);
+  const [tool, setTool] = useState('spray'); // 'spray' | 'eraser'
   const [empty, setEmpty] = useState(true);
   const controlsRef = useRef(null);
 
@@ -32,7 +32,24 @@ export default function SignatureModal({ onConfirm, onCancel }) {
       <div className="modal">
         <h2>Assine com spray</h2>
 
-        <div className="color-palette">
+        <div className="tool-toggle">
+          <button
+            type="button"
+            className={`tool-btn ${tool === 'spray' ? 'active' : ''}`}
+            onClick={() => setTool('spray')}
+          >
+            🎨 Spray
+          </button>
+          <button
+            type="button"
+            className={`tool-btn ${tool === 'eraser' ? 'active' : ''}`}
+            onClick={() => setTool('eraser')}
+          >
+            🧽 Borracha
+          </button>
+        </div>
+
+        <div className={`color-palette ${tool === 'eraser' ? 'color-palette-disabled' : ''}`}>
           {SPRAY_COLORS.map((c) => (
             <button
               key={c.value}
@@ -47,6 +64,7 @@ export default function SignatureModal({ onConfirm, onCancel }) {
 
         <SprayCanvas
           color={color}
+          tool={tool}
           onReady={(controls) => { controlsRef.current = controls; }}
           onStrokeChange={(hasStrokes) => setEmpty(!hasStrokes)}
         />

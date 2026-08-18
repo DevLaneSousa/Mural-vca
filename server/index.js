@@ -61,6 +61,18 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Exclusão manual (usada pelo modo admin escondido no telão) — qualquer
+  // cliente pode pedir, já que não há autenticação nesse projeto; o acesso
+  // é controlado só pela UI escondida no telão.
+  socket.on('signature:delete', (payload) => {
+    const id = payload?.id;
+    if (typeof id !== 'string') return;
+    const idx = signatures.findIndex((s) => s.id === id);
+    if (idx === -1) return;
+    signatures.splice(idx, 1);
+    io.emit('signature:removed', { id });
+  });
+
   socket.on('disconnect', () => {
     console.log(`[-] cliente desconectado: ${socket.id}`);
   });

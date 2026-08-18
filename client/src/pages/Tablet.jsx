@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import SignatureModal from '../components/SignatureModal';
+import gsap from 'gsap';
+import SignatureModal, { SPRAY_COLORS } from '../components/SignatureModal';
 import { socket } from '../socket';
 import { getContrastText } from '../lib/color';
 
@@ -13,8 +14,13 @@ const STICKERS = [
   { src: '/adesivos/adesivos6.svg', className: 'sticker sticker-6' },
 ];
 
+// Tempo de espera antes da assinatura realmente chegar no telão — dá tempo
+// da pessoa erguer o olhar antes dela aparecer lá.
+const REVEAL_DELAY_MS = 3000;
+
 export default function Tablet() {
   const wallRef = useRef(null);
+  const confettiRef = useRef(null);
   const [pendingPos, setPendingPos] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [sent, setSent] = useState(false);
@@ -41,13 +47,56 @@ export default function Tablet() {
     setShowModal(true);
   };
 
+  // Chuva de confete comemorando o envio — pedacinhos coloridos (reaproveita
+  // a paleta do spray) caindo do topo da tela com rotação e leve deriva.
+  const spawnConfetti = () => {
+    const container = confettiRef.current;
+    if (!container) return;
+    const colors = SPRAY_COLORS.map((c) => c.value);
+    const count = 90;
+    for (let i = 0; i < count; i++) {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      const size = 6 + Math.random() * 7;
+      piece.style.left = `${Math.random() * 100}%`;
+      piece.style.width = `${size}px`;
+      piece.style.height = `${size * (0.4 + Math.random() * 0.6)}px`;
+      piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+      piece.style.borderRadius = Math.random() < 0.5 ? '50%' : '2px';
+      container.appendChild(piece);
+
+      const drift = (Math.random() - 0.5) * 240;
+      const rotations = (180 + Math.random() * 540) * (Math.random() < 0.5 ? -1 : 1);
+      gsap.fromTo(
+        piece,
+        { y: -30, x: 0, opacity: 1, rotate: 0 },
+        {
+          y: window.innerHeight + 40,
+          x: drift,
+          rotate: rotations,
+          opacity: 0.9,
+          duration: 1.6 + Math.random() * 1.4,
+          ease: 'power1.in',
+          onComplete: () => piece.remove(),
+        }
+      );
+    }
+  };
+
   const handleConfirm = (signaturePayload) => {
     // signaturePayload = { dataUrl, strokes, color } — vem do SprayCanvas
-    socket.emit('signature:new', { ...pendingPos, ...signaturePayload });
     setShowModal(false);
     setSentColor(signaturePayload.color || '#00ff00');
     setSent(true);
-    setTimeout(() => setSent(false), 2500);
+    spawnConfetti();
+
+    // Só manda pro telão depois de um tempinho, pra dar chance da pessoa
+    // erguer o olhar antes da assinatura aparecer lá.
+    setTimeout(() => {
+      socket.emit('signature:new', { ...pendingPos, ...signaturePayload });
+    }, REVEAL_DELAY_MS);
+
+    setTimeout(() => setSent(false), REVEAL_DELAY_MS + 1800);
   };
 
   return (
@@ -90,12 +139,16 @@ export default function Tablet() {
 
       {sent && (
         <div
-          className="toast"
+          className="toast toast-big"
           style={{ background: sentColor, color: getContrastText(sentColor) }}
         >
-          Assinatura enviada! Olhe para o telão ✨
+          <strong>🎉 Assinatura enviada!</strong>
+          <span>👀 Olhe para o telão agora — ela está chegando lá!</span>
         </div>
       )}
+
+      {/* Chuva de confete disparada ao confirmar o envio */}
+      <div ref={confettiRef} className="confetti-layer" />
     </div>
   );
 }

@@ -64,6 +64,10 @@ body {
   background: #1c1f26;
   color: #f4f4f4;
 }
+.btn.danger {
+  background: #e0264d;
+  color: #fff;
+}
 
 /* ---------- Tablet ---------- */
 .tablet-page {
@@ -229,6 +233,49 @@ body {
   z-index: 60;
 }
 
+/* Aviso maior e mais explícito ao enviar — duas linhas, pop de entrada */
+.toast-big {
+  bottom: 40px;
+  padding: 18px 28px;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  max-width: 90vw;
+  text-align: center;
+  animation: toast-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.toast-big strong {
+  font-size: 21px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.toast-big span {
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+@keyframes toast-pop {
+  0% { transform: translateX(-50%) scale(0.6); opacity: 0; }
+  100% { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+
+/* Chuva de confete ao confirmar o envio */
+.confetti-layer {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 70;
+}
+.confetti-piece {
+  position: absolute;
+  top: 0;
+  will-change: transform, opacity;
+}
+
 /* ---------- Modal de assinatura ---------- */
 .modal-overlay {
   position: fixed;
@@ -262,12 +309,43 @@ body {
   touch-action: none;
 }
 
+/* ---------- Ferramenta: spray ou borracha ---------- */
+.tool-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tool-btn {
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  background: #f3f4f6;
+  color: #111;
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.tool-btn.active {
+  border-color: #111;
+  background: #fff;
+  transform: scale(1.04);
+}
+
 /* ---------- Paleta de cores do spray ---------- */
 .color-palette {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 12px;
+  transition: opacity 0.15s ease;
+}
+
+.color-palette-disabled {
+  opacity: 0.35;
+  pointer-events: none;
 }
 
 .color-swatch {
@@ -298,6 +376,10 @@ body {
   cursor: crosshair;
 }
 
+.spray-canvas-eraser {
+  cursor: cell;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -315,10 +397,10 @@ body {
 }
 
 /* ---------- Parede de tijolos (mural) ---------- */
-/* Coloque o arquivo em client/public/muro-tijolos.png */
+/* Usada tanto no telão quanto no espelho do tablet, pra ficarem iguais */
 .brick-wall {
   background-color: #3a2a22; /* aparece só um instante, antes da imagem carregar */
-  background-image: url('/muro-tijolos.png');
+  background-image: url('/parede-nova.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -399,6 +481,107 @@ body {
   width: 190px;
   transform: translate(-50%, -50%);
   pointer-events: none;
+}
+
+/* Modo admin escondido (ligado pelo adesivo2.svg): as assinaturas passam a
+   aceitar clique, com um destaque vermelho no hover indicando que dá pra
+   excluir. */
+.signatures-layer.admin-mode {
+  pointer-events: auto;
+}
+.signatures-layer.admin-mode .placed-signature-wrap {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.signatures-layer.admin-mode .placed-signature-wrap:hover .placed-signature {
+  filter: drop-shadow(0 0 0 2px #e0264d) drop-shadow(0 0 14px rgba(224, 38, 77, 0.85));
+}
+
+/* Adesivo escondido que liga/desliga o modo admin — se mistura na parede
+   como se fosse só mais um adesivo decorativo. */
+.admin-sticker {
+  position: fixed;
+  left: 1.4%;
+  bottom: 1.8%;
+  width: 56px;
+  z-index: 40;
+  opacity: 0.88;
+  transform: rotate(-9deg);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.55));
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.admin-sticker:hover {
+  transform: rotate(-9deg) scale(1.1);
+}
+.admin-sticker.active {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 12px rgba(224, 38, 77, 0.9));
+}
+
+.admin-badge {
+  position: fixed;
+  left: 1.4%;
+  bottom: calc(1.8% + 66px);
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+  max-width: 200px;
+  pointer-events: none;
+}
+
+/* Confirmação de exclusão discreta, grudada abaixo da própria assinatura —
+   sem overlay escuro nem card ocupando a tela toda (isso roda num telão). */
+.admin-confirm-popover {
+  position: absolute;
+  transform: translate(-50%, 55px);
+  background: rgba(17, 17, 17, 0.94);
+  color: #fff;
+  border: 1px solid rgba(224, 38, 77, 0.6);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  text-align: center;
+  white-space: nowrap;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+  z-index: 15;
+}
+
+.admin-confirm-popover::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid rgba(17, 17, 17, 0.94);
+}
+
+.admin-confirm-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.admin-confirm-actions button {
+  border: none;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #2a2d35;
+  color: #fff;
+}
+
+.admin-confirm-actions .admin-confirm-yes {
+  background: #e0264d;
 }
 
 .placed-signature {

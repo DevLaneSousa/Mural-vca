@@ -16,8 +16,9 @@ const DOT_MAX = 2.6;
 const DRIP_CHANCE = 0.35; // chance de pingar tinta ao soltar o traço
 const MID_STROKE_DRIP_INTERVAL = 42; // distância (px) entre checagens de pingo durante o traço
 const MID_STROKE_DRIP_CHANCE = 0.3; // chance de pingar a cada intervalo, enquanto ainda desenha
+const ERASER_RADIUS = 16; // raio do "borrachão" redondo
 
-export default function SprayCanvas({ color, onReady, onStrokeChange }) {
+export default function SprayCanvas({ color, tool = 'spray', onReady, onStrokeChange }) {
   const canvasRef = useRef(null);
   const ctxRef = useRef(null);
   const drawingRef = useRef(false);
@@ -143,6 +144,30 @@ export default function SprayCanvas({ color, onReady, onStrokeChange }) {
     ctx.globalAlpha = 1;
   };
 
+  // Borracha: apaga de verdade (destination-out), não pinta por cima —
+  // funciona mesmo depois de trocar de cor.
+  const eraseBurst = (x, y) => {
+    const ctx = ctxRef.current;
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.arc(x, y, ERASER_RADIUS, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  };
+
+  const eraseLine = (from, to) => {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist === 0) return;
+    const steps = Math.max(1, Math.round(dist / (ERASER_RADIUS * 0.5)));
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      eraseBurst(from.x + dx * t, from.y + dy * t);
+    }
+  };
+
   const getLocalPoint = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -154,6 +179,10 @@ export default function SprayCanvas({ color, onReady, onStrokeChange }) {
     dripAccumRef.current = 0;
     const p = getLocalPoint(e);
     lastPointRef.current = p;
+    if (tool === 'eraser') {
+      eraseBurst(p.x, p.y);
+      return;
+    }
     currentStrokeRef.current = [normalize(p)];
     sprayBurst(p.x, p.y);
   };
@@ -162,6 +191,13 @@ export default function SprayCanvas({ color, onReady, onStrokeChange }) {
     if (!drawingRef.current) return;
     const p = getLocalPoint(e);
     const from = lastPointRef.current;
+
+    if (tool === 'eraser') {
+      eraseLine(from, p);
+      lastPointRef.current = p;
+      return;
+    }
+
     sprayLine(from, p);
     currentStrokeRef.current.push(normalize(p));
 
@@ -184,7 +220,7 @@ export default function SprayCanvas({ color, onReady, onStrokeChange }) {
   const handlePointerUp = () => {
     if (!drawingRef.current) return;
     drawingRef.current = false;
-    if (currentStrokeRef.current.length > 1) {
+    if (tool !== 'eraser' && currentStrokeRef.current.length > 1) {
       strokesRef.current.push(currentStrokeRef.current);
       if (Math.random() < DRIP_CHANCE && lastPointRef.current) {
         addDrip(lastPointRef.current.x, lastPointRef.current.y);
@@ -202,7 +238,7 @@ export default function SprayCanvas({ color, onReady, onStrokeChange }) {
   return (
     <canvas
       ref={canvasRef}
-      className="spray-canvas"
+      className={`spray-canvas ${tool === 'eraser' ? 'spray-canvas-eraser' : ''}`}
       style={{ aspectRatio: SPRAY_ASPECT }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}

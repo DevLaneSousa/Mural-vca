@@ -8,11 +8,23 @@ const WIPE_DURATION = 0.9; // revelação (não linear) da esquerda pra direita
 export default function Telao() {
   const [placed, setPlaced] = useState([]); // já fixadas no mural
   const [active, setActive] = useState(null); // em animação no centro agora
+  const [adminMode, setAdminMode] = useState(false); // escondido: liga clicando no adesivo2.svg
+  const [deleteTarget, setDeleteTarget] = useState(null); // assinatura (sig) pendente de confirmação
   const queueRef = useRef([]);
   const processingRef = useRef(false);
   const wallRef = useRef(null);
   const videoRef = useRef(null);
   const knownPlacedIdsRef = useRef(new Set()); // pra animar só quem acabou de "teletransportar"
+
+  function requestDelete(sig) {
+    if (!adminMode) return;
+    setDeleteTarget(sig);
+  }
+
+  function confirmDelete() {
+    if (deleteTarget) socket.emit('signature:delete', { id: deleteTarget.id });
+    setDeleteTarget(null);
+  }
 
   useEffect(() => {
     socket.on('signatures:sync', (all) => setPlaced(all));
@@ -252,13 +264,14 @@ export default function Telao() {
       </div>
 
       {/* Camada separada só com as assinaturas já fixadas */}
-      <div className="signatures-layer">
+      <div className={`signatures-layer ${adminMode ? 'admin-mode' : ''}`}>
         {placed.map((sig) => (
           <div
             key={sig.id}
             id={`sig-${sig.id}`}
             className="placed-signature-wrap"
             style={{ left: `${sig.x * 100}%`, top: `${sig.y * 100}%`, '--sig-mask': `url(${sig.dataUrl})` }}
+            onClick={() => requestDelete(sig)}
           >
             <img src={sig.dataUrl} className="placed-signature" alt="assinatura" />
             {/* Textura de grão por cima, recortada na forma exata do spray
@@ -266,7 +279,36 @@ export default function Telao() {
             <div className="placed-signature-texture" />
           </div>
         ))}
+
+        {/* Confirmação discreta, grudada logo abaixo da própria assinatura —
+            nada de modal ocupando a tela toda (isso roda num telão). */}
+        {deleteTarget && (
+          <div
+            className="admin-confirm-popover"
+            style={{ left: `${deleteTarget.x * 100}%`, top: `${deleteTarget.y * 100}%` }}
+          >
+            <span>Excluir esta assinatura?</span>
+            <div className="admin-confirm-actions">
+              <button onClick={() => setDeleteTarget(null)}>Não</button>
+              <button onClick={confirmDelete} className="admin-confirm-yes">Sim</button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Adesivo "comum" grudado no muro — na verdade é o atalho escondido
+          pro modo admin. Clicar liga/desliga; com o modo ligado, tocar numa
+          assinatura abre a confirmação de exclusão. */}
+      <img
+        src="/adesivos/adesivos2.svg"
+        alt=""
+        aria-hidden="true"
+        className={`admin-sticker ${adminMode ? 'active' : ''}`}
+        onClick={() => setAdminMode((v) => !v)}
+      />
+      {adminMode && (
+        <div className="admin-badge">Modo admin: toque numa assinatura pra excluir</div>
+      )}
 
       {active && (
         <div className="active-overlay">
