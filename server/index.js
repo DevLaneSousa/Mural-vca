@@ -73,7 +73,5 @@ function clamp01(n) {
 }
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Servidor do mural rodando em http://0.0.0.0:${PORT}`);
-  console.log(`No evento, acesse pelos tablets em http://<ip-do-pc>:${PORT}/tablet`);
-  console.log(`E no telão em http://localhost:${PORT}/telao`);
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
