@@ -4,6 +4,7 @@ import { socket } from '../socket';
 
 const HIGHLIGHT_MS = 900;
 const WIPE_DURATION = 0.9;
+const SMOKE_LEAD = 0.4; 
 
 export default function Telao() {
   const [placed, setPlaced] = useState([]);
@@ -79,8 +80,15 @@ export default function Telao() {
     });
   }, [placed]);
 
-  function spawnSmoke(container, color, xPercent = 50) {
-    const count = 3 + Math.floor(Math.random() * 3);
+  function spawnSmoke(container, color, xPercent = 50, lifetime = 1.2) {
+    const count = 5 + Math.floor(Math.random() * 4);
+
+    const naturalGrow = 0.5 + Math.random() * 0.3;
+    const naturalFade = 0.7;
+    const naturalTotal = naturalGrow + naturalFade;
+    const scale = Math.min(1, Math.max(lifetime, 0.2) / naturalTotal);
+    const growDuration = naturalGrow * scale;
+    const fadeDuration = naturalFade * scale;
     for (let i = 0; i < count; i++) {
       const puff = document.createElement('div');
       puff.className = 'paint-smoke';
@@ -91,7 +99,8 @@ export default function Telao() {
       puff.style.top = `calc(50% + ${(Math.sin(angle) * dist).toFixed(1)}px)`;
       puff.style.width = `${size}px`;
       puff.style.height = `${size}px`;
-      puff.style.background = `radial-gradient(circle, ${color} 0%, ${color}00 72%)`;
+
+      puff.style.background = `radial-gradient(circle, ${color}f2 0%, ${color}b3 30%, ${color}59 58%, ${color}00 85%)`;
       container.appendChild(puff);
       gsap.fromTo(
         puff,
@@ -100,14 +109,14 @@ export default function Telao() {
           scale: 1.6,
           opacity: 0.7,
           y: -20 - Math.random() * 30,
-          duration: 0.5 + Math.random() * 0.3,
+          duration: growDuration,
           ease: 'power1.out',
           onComplete: () => {
             gsap.to(puff, {
               opacity: 0,
               y: '-=30',
               scale: '+=0.3',
-              duration: 0.7,
+              duration: fadeDuration,
               ease: 'power1.out',
               onComplete: () => puff.remove(),
             });
@@ -177,7 +186,7 @@ export default function Telao() {
     }
 
     const hasVideo = video && video.readyState >= 2 && !video.error;
-    const REVEAL_START_DELAY = 3;
+    const REVEAL_START_DELAY = 3.5;
 
     if (hasVideo) {
       video.pause();
@@ -201,12 +210,16 @@ export default function Telao() {
 
     tl.call(() => dripContainer && spawnSplatter(dripContainer, color), null, REVEAL_START_DELAY);
 
-    const puffCount = 9;
+    const wipeEnd = REVEAL_START_DELAY + WIPE_DURATION;
+    const smokeStart = REVEAL_START_DELAY - SMOKE_LEAD;
+
+    const puffCount = 13;
     for (let i = 0; i < puffCount; i++) {
       const progress = (i + 0.5) / puffCount;
-      const t = REVEAL_START_DELAY + progress * WIPE_DURATION;
-      const xPercent = progress * 100;
-      tl.call(() => dripContainer && spawnSmoke(dripContainer, color, xPercent), null, t);
+      const t = smokeStart + progress * (wipeEnd - smokeStart);
+      const xPercent = Math.max(0, Math.min(100, ((t - REVEAL_START_DELAY) / WIPE_DURATION) * 100));
+      const lifetime = wipeEnd - t;
+      tl.call(() => dripContainer && spawnSmoke(dripContainer, color, xPercent, lifetime), null, t);
     }
 
     tl.set(imgEl, { opacity: 1 }, REVEAL_START_DELAY);
@@ -216,13 +229,13 @@ export default function Telao() {
       REVEAL_START_DELAY
     );
     if (smokeSweepEl) {
-      tl.to(smokeSweepEl, { opacity: 0.9, duration: 0.08 }, REVEAL_START_DELAY);
+      tl.to(smokeSweepEl, { opacity: 0.9, duration: 0.15 }, smokeStart);
       tl.to(
         smokeSweepEl,
-        { backgroundPosition: '-60% 0', duration: WIPE_DURATION, ease: 'power3.out' },
-        REVEAL_START_DELAY
+        { backgroundPosition: '-60% 0', duration: wipeEnd - smokeStart, ease: 'power3.out' },
+        smokeStart
       );
-      tl.to(smokeSweepEl, { opacity: 0, duration: 0.3 }, `+=0.05`);
+      tl.to(smokeSweepEl, { opacity: 0, duration: 0.3 }, wipeEnd - 0.3);
     }
 
     tl.addLabel('revealEnd');
