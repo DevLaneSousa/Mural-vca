@@ -3,18 +3,18 @@ import gsap from 'gsap';
 import { socket } from '../socket';
 
 const HIGHLIGHT_MS = 900;
-const WIPE_DURATION = 0.9; // revelação (não linear) da esquerda pra direita
+const WIPE_DURATION = 0.9;
 
 export default function Telao() {
-  const [placed, setPlaced] = useState([]); // já fixadas no mural
-  const [active, setActive] = useState(null); // em animação no centro agora
-  const [adminMode, setAdminMode] = useState(false); // escondido: liga clicando no adesivo2.svg
-  const [deleteTarget, setDeleteTarget] = useState(null); // assinatura (sig) pendente de confirmação
+  const [placed, setPlaced] = useState([]);
+  const [active, setActive] = useState(null);
+  const [adminMode, setAdminMode] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const queueRef = useRef([]);
   const processingRef = useRef(false);
   const wallRef = useRef(null);
   const videoRef = useRef(null);
-  const knownPlacedIdsRef = useRef(new Set()); // pra animar só quem acabou de "teletransportar"
+  const knownPlacedIdsRef = useRef(new Set());
 
   function requestDelete(sig) {
     if (!adminMode) return;
@@ -39,7 +39,6 @@ export default function Telao() {
       socket.off('signature:new');
       socket.off('signature:removed');
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function removePlaced(id) {
@@ -64,9 +63,6 @@ export default function Telao() {
     setActive(next);
   }
 
-  // A assinatura some do centro e "re-aparece" (teletransporta) já no seu
-  // lugar no mural — este efeito dá o flash de chegada nela, em vez de
-  // deixá-la só surgir estática.
   useLayoutEffect(() => {
     const known = knownPlacedIdsRef.current;
     placed.forEach((sig) => {
@@ -83,9 +79,6 @@ export default function Telao() {
     });
   }, [placed]);
 
-  // Nuvenzinhas de "fumaça" coloridas por cima do traço, como se a tinta do
-  // spray estivesse soltando fumaça — usam a mesma cor escolhida pelo
-  // usuário. xPercent posiciona a nuvem ao longo da varredura esquerda→direita.
   function spawnSmoke(container, color, xPercent = 50) {
     const count = 3 + Math.floor(Math.random() * 3);
     for (let i = 0; i < count; i++) {
@@ -124,8 +117,6 @@ export default function Telao() {
     }
   }
 
-  // Pequenos respingos ao redor, como o "chuvisco" de uma lata de spray —
-  // aparecem enquanto a assinatura é criada, não escorrem e somem rápido.
   function spawnSplatter(container, color) {
     const count = 6 + Math.floor(Math.random() * 6);
     for (let i = 0; i < count; i++) {
@@ -160,7 +151,6 @@ export default function Telao() {
     }
   }
 
-  // Dispara a timeline sempre que uma nova assinatura entra em "active"
   useEffect(() => {
     if (!active) return;
 
@@ -186,21 +176,20 @@ export default function Telao() {
       gsap.set(smokeSweepEl, { opacity: 0, backgroundPosition: '150% 0' });
     }
 
-    // --- 1) mascote entra e "joga tinta" (ou fallback em CSS) ---
     const hasVideo = video && video.readyState >= 2 && !video.error;
-    const VIDEO_DURATION = hasVideo ? video.duration || 2 : 0;
-    // O traço/frase começa a surgir quando o vídeo estiver na metade — os
-    // dois correm ao mesmo tempo (o vídeo fica atrás, como um fundo que
-    // combina com o do telão) em vez de um esperar o outro terminar.
-    const REVEAL_START_DELAY = hasVideo ? VIDEO_DURATION / 2 : 0.3;
+    const REVEAL_START_DELAY = 3;
 
     if (hasVideo) {
+      video.pause();
       video.currentTime = 0;
       video.style.opacity = 1;
       video.play().catch(() => {});
-      // Reserva o tempo do vídeo inteiro na timeline, em paralelo com o resto
-      tl.to({}, { duration: VIDEO_DURATION }, 0);
-      tl.to(video, { opacity: 0, duration: 0.4 }, VIDEO_DURATION);
+
+      const fadeOutVideo = () => {
+        video.removeEventListener('ended', fadeOutVideo);
+        gsap.to(video, { opacity: 0, duration: 0.4 });
+      };
+      video.addEventListener('ended', fadeOutVideo);
     } else {
       tl.fromTo(
         '.paint-splash',
@@ -210,10 +199,6 @@ export default function Telao() {
       );
     }
 
-    // --- 2) a assinatura surge "raspada" da esquerda pra direita — uma
-    // fumaça densa na cor escolhida varre a imagem (não é uma revelação
-    // linear) e, conforme ela passa, o texto real vai aparecendo por baixo,
-    // com respingos e fumacinhas extras ao redor ---
     tl.call(() => dripContainer && spawnSplatter(dripContainer, color), null, REVEAL_START_DELAY);
 
     const puffCount = 9;
@@ -240,30 +225,21 @@ export default function Telao() {
       tl.to(smokeSweepEl, { opacity: 0, duration: 0.3 }, `+=0.05`);
     }
 
-    // Marca o fim real da revelação: o maior entre o vídeo e a "raspada"
     tl.addLabel('revealEnd');
 
-    // --- 3) destaque parado no centro ---
     tl.to({}, { duration: HIGHLIGHT_MS / 1000 }, 'revealEnd+=0.15');
 
-    // --- 4) some do centro — ela "teletransporta" pro lugar dela no mural
-    // em vez de voar até lá (o pop de chegada acontece em .placed-signature-wrap
-    // quando essa assinatura entra no array `placed`, ver useLayoutEffect acima) ---
     tl.to(imgEl, { opacity: 0, scale: 0.55, duration: 0.25, ease: 'power2.in' });
 
     return () => tl.kill();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
   return (
     <div className="telao-page">
       <div className="wall brick-wall" ref={wallRef}>
-        {/* Manchas envelhecidas + riscos de giz nos cantos, pra dar mais
-            idade/textura ao muro (além do grão sutil que já existia) */}
         <div className="wall-aging" />
       </div>
 
-      {/* Camada separada só com as assinaturas já fixadas */}
       <div className={`signatures-layer ${adminMode ? 'admin-mode' : ''}`}>
         {placed.map((sig) => (
           <div
@@ -274,14 +250,10 @@ export default function Telao() {
             onClick={() => requestDelete(sig)}
           >
             <img src={sig.dataUrl} className="placed-signature" alt="assinatura" />
-            {/* Textura de grão por cima, recortada na forma exata do spray
-                (via mask), pra não parecer um adesivo liso na parede */}
             <div className="placed-signature-texture" />
           </div>
         ))}
 
-        {/* Confirmação discreta, grudada logo abaixo da própria assinatura —
-            nada de modal ocupando a tela toda (isso roda num telão). */}
         {deleteTarget && (
           <div
             className="admin-confirm-popover"
@@ -296,9 +268,6 @@ export default function Telao() {
         )}
       </div>
 
-      {/* Adesivo "comum" grudado no muro — na verdade é o atalho escondido
-          pro modo admin. Clicar liga/desliga; com o modo ligado, tocar numa
-          assinatura abre a confirmação de exclusão. */}
       <img
         src="/adesivos/adesivos2.svg"
         alt=""
@@ -316,18 +285,12 @@ export default function Telao() {
 
           <div id="drip-container" className="drip-container" />
 
-          {/* A imagem real exportada (textura e cor de spray originais) é
-              revelada com um clip-path animado da esquerda pra direita —
-              a "raspadinha" — em vez de redesenhar o traço. */}
           <img id="active-signature" src={active.dataUrl} className="active-signature" alt="assinatura em destaque" />
 
-          {/* Fumaça que varre por cima da imagem, na cor escolhida, acompanhando a raspadinha */}
           <div id="smoke-sweep" className="smoke-sweep" />
         </div>
       )}
 
-      {/* Vídeo do mascote — sem background (canal alpha), então fica por
-          cima de tudo de novo, como antes. */}
       <video ref={videoRef} className="mascot-video" muted playsInline preload="auto">
         <source src="/video-s-bg.webm" type="video/webm" />
       </video>

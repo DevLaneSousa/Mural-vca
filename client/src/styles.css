@@ -13,7 +13,6 @@ body {
   color: #f4f4f4;
 }
 
-/* ---------- Home ---------- */
 .home {
   height: 100%;
   display: flex;
@@ -30,7 +29,6 @@ body {
   gap: 12px;
 }
 
-/* ---------- Botões ---------- */
 .btn {
   border: 3px solid #111;
   border-radius: 10px;
@@ -69,7 +67,6 @@ body {
   color: #fff;
 }
 
-/* ---------- Tablet ---------- */
 .tablet-page {
   --accent-green: #8ee000;
   --accent-orange: #ff7a1a;
@@ -167,7 +164,6 @@ body {
   border-radius: 999px;
 }
 
-/* ---------- Adesivos decorativos (tablet) ---------- */
 .sticker {
   position: absolute;
   z-index: 1;
@@ -182,7 +178,6 @@ body {
 .sticker-5 { bottom: 6%; left: 30%; width: 66px; transform: rotate(-10deg); }
 .sticker-6 { top: 38%; right: 2%; width: 70px; transform: rotate(9deg); }
 
-/* ---------- Mascote em destaque (tablet) ---------- */
 .mascot-hero {
   position: absolute;
   bottom: 0;
@@ -233,7 +228,6 @@ body {
   z-index: 60;
 }
 
-/* Aviso maior e mais explícito ao enviar — duas linhas, pop de entrada */
 .toast-big {
   bottom: 40px;
   padding: 18px 28px;
@@ -262,7 +256,6 @@ body {
   100% { transform: translateX(-50%) scale(1); opacity: 1; }
 }
 
-/* Chuva de confete ao confirmar o envio */
 .confetti-layer {
   position: fixed;
   inset: 0;
@@ -276,7 +269,6 @@ body {
   will-change: transform, opacity;
 }
 
-/* ---------- Modal de assinatura ---------- */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -309,7 +301,6 @@ body {
   touch-action: none;
 }
 
-/* ---------- Ferramenta: spray ou borracha ---------- */
 .tool-toggle {
   display: flex;
   gap: 8px;
@@ -334,7 +325,6 @@ body {
   transform: scale(1.04);
 }
 
-/* ---------- Paleta de cores do spray ---------- */
 .color-palette {
   display: flex;
   gap: 10px;
@@ -363,7 +353,6 @@ body {
   transform: scale(1.15);
 }
 
-/* ---------- Canvas de spray (modal) ---------- */
 .spray-canvas {
   width: 100%;
   display: block;
@@ -387,7 +376,6 @@ body {
   margin-top: 16px;
 }
 
-/* ---------- Telão ---------- */
 .telao-page {
   height: 100vh;
   width: 100vw;
@@ -396,10 +384,8 @@ body {
   background: radial-gradient(circle at 50% 30%, #1a1d24, #0a0b0e 70%);
 }
 
-/* ---------- Parede de tijolos (mural) ---------- */
-/* Usada tanto no telão quanto no espelho do tablet, pra ficarem iguais */
 .brick-wall {
-  background-color: #3a2a22; /* aparece só um instante, antes da imagem carregar */
+  background-color: #3a2a22;
   background-image: url('/parede-nova.jpg');
   background-size: cover;
   background-position: center;
@@ -407,13 +393,10 @@ body {
   position: relative;
 }
 
-/* No telão, a parede preenche a tela inteira sem cortar as bordas da
-   imagem (mesmo que estique um pouco, em vez de usar "cover" e recortar) */
 .wall.brick-wall {
   background-size: 100% 100%;
 }
 
-/* Grão sutil + vinheta pra dar profundidade e disfarçar bordas de repetição */
 .brick-wall::after {
   content: '';
   position: absolute;
@@ -426,8 +409,6 @@ body {
   pointer-events: none;
 }
 
-/* Manchas de tinta/umidade envelhecidas, espalhadas pelo muro do telão —
-   escurecem o tijolo por baixo (mix-blend-mode: multiply). */
 .wall-aging {
   position: absolute;
   inset: 0;
@@ -441,10 +422,6 @@ body {
   pointer-events: none;
 }
 
-/* Riscos de giz desbotados, concentrados nos 4 cantos, como se alguém
-   tivesse rabiscado a parede antes — cada canto usa o mesmo desenho
-   espelhado/girado, pra não parecerem 4 cópias idênticas. Mix-blend-mode:
-   screen pra clarear a parede em vez de escurecer. */
 .wall-aging::after {
   content: '';
   position: absolute;
@@ -468,7 +445,6 @@ body {
   z-index: 1;
 }
 
-/* Camada separada das assinaturas já fixadas, acima do fundo de tijolos */
 .signatures-layer {
   position: absolute;
   inset: 0;
@@ -483,9 +459,6 @@ body {
   pointer-events: none;
 }
 
-/* Modo admin escondido (ligado pelo adesivo2.svg): as assinaturas passam a
-   aceitar clique, com um destaque vermelho no hover indicando que dá pra
-   excluir. */
 .signatures-layer.admin-mode {
   pointer-events: auto;
 }
@@ -497,8 +470,6 @@ body {
   filter: drop-shadow(0 0 0 2px #e0264d) drop-shadow(0 0 14px rgba(224, 38, 77, 0.85));
 }
 
-/* Adesivo escondido que liga/desliga o modo admin — se mistura na parede
-   como se fosse só mais um adesivo decorativo. */
 .admin-sticker {
   position: fixed;
   left: 1.4%;
@@ -533,8 +504,6 @@ body {
   pointer-events: none;
 }
 
-/* Confirmação de exclusão discreta, grudada abaixo da própria assinatura —
-   sem overlay escuro nem card ocupando a tela toda (isso roda num telão). */
 .admin-confirm-popover {
   position: absolute;
   transform: translate(-50%, 55px);
@@ -592,8 +561,6 @@ body {
   pointer-events: none;
 }
 
-/* Grão sutil recortado exatamente na forma do spray (usa a própria imagem
-   como máscara de alfa), pra parecer tinta na parede e não um adesivo liso */
 .placed-signature-texture {
   position: absolute;
   inset: 0;
@@ -615,8 +582,6 @@ body {
 .active-overlay {
   position: fixed;
   top: 50%;
-  /* Deslocada mais pro canto direito, alinhada com a direção do spray do
-     mascote no vídeo de fundo, em vez de ficar centralizada na tela. */
   left: 72%;
   transform: translate(-50%, -50%);
   z-index: 20;
@@ -660,8 +625,6 @@ body {
   pointer-events: none;
 }
 
-/* Nuvem que varre a assinatura da esquerda pra direita ("raspadinha") na
-   cor escolhida pelo usuário (via currentColor, setado no JS) */
 .smoke-sweep {
   position: absolute;
   inset: 0;
@@ -691,10 +654,7 @@ body {
   inset: 0;
   width: 100vw;
   height: 100vh;
-  object-fit: cover;
-  /* Sem background (canal alpha) — fica por cima de tudo (mural e
-     assinatura em destaque), igual era antes de existir a versão com fundo
-     opaco do vídeo. */
+  object-fit: fill;
   z-index: 30;
   opacity: 0;
   pointer-events: none;

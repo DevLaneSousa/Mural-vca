@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react';
 import SprayCanvas from './SprayCanvas';
 
-// Paleta de cores estilo spray de graffiti — ajuste livremente
 export const SPRAY_COLORS = [
   { name: 'Rosa neon', value: '#f4189b' },
   { name: 'Azul VCA', value: '#1f7ae0' },
@@ -14,7 +13,7 @@ export const SPRAY_COLORS = [
 
 export default function SignatureModal({ onConfirm, onCancel }) {
   const [color, setColor] = useState(SPRAY_COLORS[0].value);
-  const [tool, setTool] = useState('spray'); // 'spray' | 'eraser'
+  const [tool, setTool] = useState('spray');
   const [empty, setEmpty] = useState(true);
   const controlsRef = useRef(null);
 

@@ -1,5 +1,3 @@
-// Decide se o texto deve ser branco ou escuro em cima de uma cor de fundo,
-// usando luminância relativa aproximada (fórmula YIQ).
 export function getContrastText(hex) {
   if (!hex || hex[0] !== '#') return '#111111';
   const r = parseInt(hex.slice(1, 3), 16);

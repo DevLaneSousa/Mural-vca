@@ -2,8 +2,6 @@ import { useEffect, useRef } from 'react';
 
 const BALL_COUNT = 140;
 
-// Fundo decorativo (não interativo) inspirado no efeito de bolhas orbitando
-// do protótipo de referência. Roda em canvas puro, sem dependências externas.
 export default function AmbientBackground({ hue = 210 }) {
   const canvasRef = useRef(null);
   const stateRef = useRef(null);

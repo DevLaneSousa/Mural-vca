@@ -4,7 +4,6 @@ import SignatureModal, { SPRAY_COLORS } from '../components/SignatureModal';
 import { socket } from '../socket';
 import { getContrastText } from '../lib/color';
 
-// Adesivos decorativos espalhados pela tela — troque/adicione à vontade
 const STICKERS = [
   { src: '/adesivos/adesivos1.svg', className: 'sticker sticker-1' },
   { src: '/adesivos/adesivos5.svg', className: 'sticker sticker-2' },
@@ -14,8 +13,6 @@ const STICKERS = [
   { src: '/adesivos/adesivos6.svg', className: 'sticker sticker-6' },
 ];
 
-// Tempo de espera antes da assinatura realmente chegar no telão — dá tempo
-// da pessoa erguer o olhar antes dela aparecer lá.
 const REVEAL_DELAY_MS = 3000;
 
 export default function Tablet() {
@@ -25,7 +22,7 @@ export default function Tablet() {
   const [showModal, setShowModal] = useState(false);
   const [sent, setSent] = useState(false);
   const [sentColor, setSentColor] = useState('#00ff00');
-  const [occupied, setOccupied] = useState([]); // espelha as assinaturas já no mural
+  const [occupied, setOccupied] = useState([]);
 
   useEffect(() => {
     socket.on('signatures:sync', (all) => setOccupied(all));
@@ -47,8 +44,6 @@ export default function Tablet() {
     setShowModal(true);
   };
 
-  // Chuva de confete comemorando o envio — pedacinhos coloridos (reaproveita
-  // a paleta do spray) caindo do topo da tela com rotação e leve deriva.
   const spawnConfetti = () => {
     const container = confettiRef.current;
     if (!container) return;
@@ -84,14 +79,11 @@ export default function Tablet() {
   };
 
   const handleConfirm = (signaturePayload) => {
-    // signaturePayload = { dataUrl, strokes, color } — vem do SprayCanvas
     setShowModal(false);
     setSentColor(signaturePayload.color || '#00ff00');
     setSent(true);
     spawnConfetti();
 
-    // Só manda pro telão depois de um tempinho, pra dar chance da pessoa
-    // erguer o olhar antes da assinatura aparecer lá.
     setTimeout(() => {
       socket.emit('signature:new', { ...pendingPos, ...signaturePayload });
     }, REVEAL_DELAY_MS);
@@ -147,7 +139,6 @@ export default function Tablet() {
         </div>
       )}
 
-      {/* Chuva de confete disparada ao confirmar o envio */}
       <div ref={confettiRef} className="confetti-layer" />
     </div>
   );

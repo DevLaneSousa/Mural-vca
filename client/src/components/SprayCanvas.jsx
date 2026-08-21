@@ -1,34 +1,27 @@
 import { useEffect, useRef } from 'react';
 
-// Proporção fixa do canvas (largura:altura). Mantemos isso constante em
-// qualquer tela para que os pontos normalizados (0-1) cheguem intactos no
-// telão, sem distorcer o traço.
-export const SPRAY_ASPECT = 2.2; // largura / altura
+export const SPRAY_ASPECT = 2.2;
 
-// Ajuste estes valores para calibrar o "realismo" do spray:
-const STEP_PX = 2.2; // distância entre amostras ao longo do traço (menor = mais denso/contínuo)
-const PARTICLES_PER_STEP = 7; // partículas do núcleo denso, geradas a cada amostra
-const JITTER_RADIUS = 4; // dispersão do núcleo ao redor do traço (px) — pequeno = mais "linear"
-const HALO_PARTICLES_PER_STEP = 5; // névoa/overspray fina, além do núcleo (o "chuvisco" de uma lata real)
-const HALO_SPREAD = 10; // alcance extra da névoa além do núcleo (px)
+const STEP_PX = 2.2;
+const PARTICLES_PER_STEP = 7;
+const JITTER_RADIUS = 4;
+const HALO_PARTICLES_PER_STEP = 5;
+const HALO_SPREAD = 10;
 const DOT_MIN = 0.6;
 const DOT_MAX = 2.6;
-const DRIP_CHANCE = 0.35; // chance de pingar tinta ao soltar o traço
-const MID_STROKE_DRIP_INTERVAL = 42; // distância (px) entre checagens de pingo durante o traço
-const MID_STROKE_DRIP_CHANCE = 0.3; // chance de pingar a cada intervalo, enquanto ainda desenha
-const ERASER_RADIUS = 16; // raio do "borrachão" redondo
+const DRIP_CHANCE = 0.35;
+const MID_STROKE_DRIP_INTERVAL = 42;
+const MID_STROKE_DRIP_CHANCE = 0.3;
+const ERASER_RADIUS = 16;
 
 export default function SprayCanvas({ color, tool = 'spray', onReady, onStrokeChange }) {
   const canvasRef = useRef(null);
   const ctxRef = useRef(null);
   const drawingRef = useRef(false);
   const lastPointRef = useRef(null);
-  const strokesRef = useRef([]); // pontos normalizados (0-1) por traço, para reconstrução vetorial no telão
-  const dripAccumRef = useRef(0); // distância acumulada desde o último pingo em meio ao traço
+  const strokesRef = useRef([]);
+  const dripAccumRef = useRef(0);
   const currentStrokeRef = useRef([]);
-  // 'color' é lido dentro do useEffect de montagem (roda só 1x), então uma
-  // closure direta ficaria travada na cor inicial. O ref sempre reflete a
-  // cor atual escolhida no modal, mesmo depois de trocar a cor.
   const colorRef = useRef(color);
   useEffect(() => {
     colorRef.current = color;
@@ -49,7 +42,6 @@ export default function SprayCanvas({ color, tool = 'spray', onReady, onStrokeCh
     resize();
     window.addEventListener('resize', resize);
 
-    // Expõe controles para o componente pai (limpar / exportar)
     onReady?.({
       clear: () => {
         const ctx = ctxRef.current;
@@ -66,13 +58,11 @@ export default function SprayCanvas({ color, tool = 'spray', onReady, onStrokeCh
     });
 
     return () => window.removeEventListener('resize', resize);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const sprayBurst = (x, y) => {
     const ctx = ctxRef.current;
 
-    // núcleo: tinta densa e concentrada perto do centro do traço
     for (let i = 0; i < PARTICLES_PER_STEP; i++) {
       const angle = Math.random() * Math.PI * 2;
       const r = Math.pow(Math.random(), 1.6) * JITTER_RADIUS;
@@ -88,9 +78,6 @@ export default function SprayCanvas({ color, tool = 'spray', onReady, onStrokeCh
       ctx.fill();
     }
 
-    // névoa: respingos finos e translúcidos além do núcleo — é o "chuvisco"
-    // que uma lata de spray real deixa ao redor do traço, dando a sensação
-    // de textura granulada em vez de uma linha lisa
     for (let i = 0; i < HALO_PARTICLES_PER_STEP; i++) {
       const angle = Math.random() * Math.PI * 2;
       const r = JITTER_RADIUS + Math.random() * HALO_SPREAD;
@@ -109,9 +96,6 @@ export default function SprayCanvas({ color, tool = 'spray', onReady, onStrokeCh
     ctx.globalAlpha = 1;
   };
 
-  // Distribui as amostras ao longo do segmento com espaçamento ~constante
-  // (STEP_PX), independentemente da velocidade do movimento — é isso que
-  // evita tanto lacunas (traço rápido) quanto acúmulo de tinta (traço lento).
   const sprayLine = (from, to) => {
     const dx = to.x - from.x;
     const dy = to.y - from.y;
@@ -144,8 +128,6 @@ export default function SprayCanvas({ color, tool = 'spray', onReady, onStrokeCh
     ctx.globalAlpha = 1;
   };
 
-  // Borracha: apaga de verdade (destination-out), não pinta por cima —
-  // funciona mesmo depois de trocar de cor.
   const eraseBurst = (x, y) => {
     const ctx = ctxRef.current;
     ctx.save();
@@ -201,9 +183,6 @@ export default function SprayCanvas({ color, tool = 'spray', onReady, onStrokeCh
     sprayLine(from, p);
     currentStrokeRef.current.push(normalize(p));
 
-    // Pinga tinta de tempos em tempos enquanto a pessoa ainda está
-    // desenhando — não só quando solta o traço. Simula spray real, que
-    // escorre quando fica tempo demais no mesmo lugar.
     const dx = p.x - from.x;
     const dy = p.y - from.y;
     dripAccumRef.current += Math.sqrt(dx * dx + dy * dy);

@@ -8,8 +8,6 @@ import { Server } from 'socket.io';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3001;
 
-// Quantidade máxima de assinaturas visíveis no mural ao mesmo tempo.
-// Ao ultrapassar, a mais antiga é removida para liberar espaço.
 const MAX_SIGNATURES = 60;
 
 const app = express();
@@ -18,24 +16,18 @@ const io = new Server(server, {
   cors: { origin: '*' },
 });
 
-// Serve o build de produção do client (rode "npm run build" na pasta client antes)
 const clientDist = path.join(__dirname, '../client/dist');
 app.use(express.static(clientDist));
 
-// Fallback de SPA: qualquer rota que não seja um arquivo estático
-// (ex: /tablet, /telao) devolve o index.html e o React Router assume dali.
 app.get('*', (req, res) => {
   res.sendFile(path.join(clientDist, 'index.html'));
 });
 
-// Estado em memória. Não há banco de dados: reiniciar o servidor zera tudo.
 let signatures = [];
 
 io.on('connection', (socket) => {
   console.log(`[+] cliente conectado: ${socket.id} (total: ${io.engine.clientsCount})`);
 
-  // Ao conectar, quem entrar (telão ou tablet) recebe o estado atual completo,
-  // isso resolve o caso de dar F5 no telão no meio do evento.
   socket.emit('signatures:sync', signatures);
 
   socket.on('signature:new', (payload) => {
@@ -54,16 +46,12 @@ io.on('connection', (socket) => {
     signatures.push(signature);
     io.emit('signature:new', signature);
 
-    // Libera espaço removendo a(s) mais antiga(s) além do limite
     while (signatures.length > MAX_SIGNATURES) {
       const removed = signatures.shift();
       io.emit('signature:removed', { id: removed.id });
     }
   });
 
-  // Exclusão manual (usada pelo modo admin escondido no telão) — qualquer
-  // cliente pode pedir, já que não há autenticação nesse projeto; o acesso
-  // é controlado só pela UI escondida no telão.
   socket.on('signature:delete', (payload) => {
     const id = payload?.id;
     if (typeof id !== 'string') return;
