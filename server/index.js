@@ -8,7 +8,7 @@ import { Server } from 'socket.io';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3001;
 
-const MAX_SIGNATURES = 60;
+const MAX_SIGNATURES = 200;
 
 const app = express();
 const server = http.createServer(app);
